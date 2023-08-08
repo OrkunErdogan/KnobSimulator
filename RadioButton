@@ -1,0 +1,378 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Windows.Forms;
+using System.Net.Sockets;
+using System.Net;
+
+namespace WindowsFormsApplication1
+{
+    public partial class Form1 : Form
+    {
+        int radius = 75;
+       
+        int center_x = 125;
+        int center_y = 95;
+        
+        int center1_x = 400;
+        int center1_y = 95;
+        
+        int volume_angle,frequency_angle = 0;
+        
+        int volume = 0;
+        string volumeData = "0";
+        
+        float frequency = 99;
+        string frequencyData = "99.0";
+        
+        float [] frequency_values = new float[7];
+        int [] angle_values = new int[6];
+        
+        byte [] dataBytes=new byte [7];
+        
+        private UdpClient client_1;
+        IPAddress remoteIPAddress = IPAddress.Parse("127.0.0.1");
+        int remotePort = 15000;
+    
+        public Form1()
+        {
+            InitializeComponent();
+            client_1 = new UdpClient();
+            label1.Text = "Volume: 0";
+            label2.Text = "Frequency: 99.0 ";
+        }
+
+        private bool Inside_Circle(int xc, int yc, int x, int y)
+        {
+            int dx = xc- x;
+            int dy = center_y - y;
+            return (dx * dx) + (dy * dy) <= (radius * radius);
+        }
+
+        private void Form1_MouseWheel(object sender, MouseEventArgs e)
+        {
+            
+            if (Inside_Circle(center_x,center_y,e.X, e.Y))
+            {
+                if (e.Delta > 0)
+                {
+                    volume_angle += 1;
+                }
+                else if (e.Delta < 0)
+                {
+                    volume_angle -= 1;
+                }
+
+                int x = center_x + (int)(radius * Math.Sin(Math.PI * volume_angle / 180.0));
+                int y = center_y - (int)(radius * Math.Cos(Math.PI * volume_angle / 180.0));
+         
+                lineShape1.X1 = center_x;
+                lineShape1.Y1 = center_y;
+                lineShape1.X2 = x;
+                lineShape1.Y2 = y;
+
+                volume = (5 * volume_angle / 18);
+                label1.Text = "Volume:" + volume.ToString();
+
+                volumeData = volume.ToString();
+                
+                if (volume_angle>= 360)
+                {
+                    volume_angle = 360;
+                    volume = 100;
+                }
+
+                else if (volume_angle < 0)
+                {
+                    volume_angle = 0;
+                    volume = 0;
+                }
+            }
+
+            else if (Inside_Circle(center1_x, center1_y, e.X, e.Y))
+            {
+                
+                if (e.Delta > 0)
+                {
+                    frequency_angle += 1;
+                }
+                else if (e.Delta < 0)
+                {
+                    frequency_angle -= 1;
+                }
+
+                int x_1 = center1_x + (int)(radius * Math.Sin(Math.PI * frequency_angle / 180.0));
+                int y_1 = center1_y - (int)(radius * Math.Cos(Math.PI * frequency_angle / 180.0));
+
+                lineShape2.X1 = center1_x;
+                lineShape2.Y1 = center1_y;
+                lineShape2.X2 = x_1;
+                lineShape2.Y2 = y_1;
+
+                float frequencyRange = 108 - 99;
+                float angleIncrement = (float)(360.0 / frequencyRange);
+                frequency = 99 + (frequency_angle / angleIncrement);
+                label2.Text = "Frequency:" + frequency.ToString("0.0");
+
+                frequency_values[0] = frequency;
+                   
+                //Console.WriteLine(frequency_values[0]);
+               
+                if (frequency_angle > 360)
+                {
+                    frequency_angle = 360;
+                    frequency = 108;
+                }
+
+                else if (frequency_angle < 0)
+                {
+                    frequency_angle = 0;
+                    frequency = 99;
+                }
+
+            }
+
+            string combined_data = String.Format("{0}|{1}|{2}|{3}|{4}|{5}|{6}|{7}", volumeData, 
+            frequency_values[0],frequency_values[1],frequency_values[2],frequency_values[3],frequency_values[4],frequency_values[5],frequency_values[6]);
+            
+            dataBytes = Encoding.ASCII.GetBytes(combined_data);
+            client_1.Send(dataBytes, dataBytes.Length, new IPEndPoint(remoteIPAddress, remotePort));
+        }
+
+        private void ovalShape1_MouseEnter(object sender, EventArgs e)
+        {
+            this.MouseWheel += Form1_MouseWheel;
+        }
+      
+        private void ovalShape2_MouseEnter(object sender, EventArgs e)
+        {
+            this.MouseWheel += Form1_MouseWheel;
+        }
+
+        private void label3_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (label3.Text == "Radio 1")
+            {
+                return;
+            }
+
+            else if (e.Button == MouseButtons.Right)
+            {
+                int target_angle = angle_values[0];
+                float target_frequency = frequency_values[1];
+
+                int x_1 = center1_x + (int)(radius * Math.Sin(Math.PI * target_angle / 180.0));
+                int y_1 = center1_y - (int)(radius * Math.Cos(Math.PI * target_angle / 180.0));
+                label2.Text = "Frequency:" + target_frequency.ToString("0.0");
+
+                lineShape2.X2 = x_1;
+                lineShape2.Y2 = y_1;
+
+                frequencyData = target_frequency.ToString("0.0");
+                string combined_data = String.Format("{0}|{1}", volumeData, frequency);
+
+                dataBytes = Encoding.ASCII.GetBytes(combined_data);
+                client_1.Send(dataBytes, dataBytes.Length, new IPEndPoint(remoteIPAddress, remotePort));
+
+                frequency_angle = target_angle;
+
+            }
+            
+        }
+
+        private void label3_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+                label3.Text = frequency.ToString("0.0");
+                
+                frequency_values[1] = frequency;
+                angle_values[0] = frequency_angle;
+        }
+
+        private void label4_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (label4.Text == "Radio 2")
+            {
+                return;
+            }
+           
+            else if (e.Button == MouseButtons.Right)
+            {
+                int target_angle = angle_values[1];
+                float target_frequency = frequency_values[2];
+               
+                
+                int x_1 = center1_x + (int)(radius * Math.Sin(Math.PI * target_angle / 180.0));
+                int y_1 = center1_y - (int)(radius * Math.Cos(Math.PI * target_angle / 180.0));
+                label2.Text = "Frequency:" + frequency_values[2].ToString("0.0");
+
+                lineShape2.X2 = x_1;
+                lineShape2.Y2 = y_1;
+
+                frequencyData = target_frequency.ToString("0.0");
+                string combined_data = String.Format("{0}|{1}", volumeData, frequency);
+                
+                dataBytes = Encoding.ASCII.GetBytes(combined_data);
+                client_1.Send(dataBytes, dataBytes.Length, new IPEndPoint(remoteIPAddress, remotePort));
+                
+                frequency_angle = target_angle;
+             
+            }
+        }
+
+        private void label4_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            label4.Text = frequency.ToString("0.0");
+
+            frequency_values[2] = frequency;
+            angle_values[1] = frequency_angle;
+           
+        }
+
+        private void label5_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (label5.Text == "Radio 3")
+            {
+                return;
+            }
+
+            else if (e.Button == MouseButtons.Right)
+            {
+                int target_angle = angle_values[2];
+                float target_frequency = frequency_values[3];
+           
+                int x_1 = center1_x + (int)(radius * Math.Sin(Math.PI * target_angle / 180.0));
+                int y_1 = center1_y - (int)(radius * Math.Cos(Math.PI * target_angle / 180.0));
+                label2.Text = "Frequency:" + target_frequency.ToString("0.0");
+
+                lineShape2.X2 = x_1;
+                lineShape2.Y2 = y_1;
+
+                frequencyData = target_frequency.ToString("0.0");
+                string combined_data = String.Format("{0}|{1}", volumeData, frequencyData);
+                
+                dataBytes = Encoding.ASCII.GetBytes(combined_data);
+                client_1.Send(dataBytes, dataBytes.Length, new IPEndPoint(remoteIPAddress, remotePort));
+                
+                frequency_angle = target_angle;
+            }
+        }
+
+        private void label5_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            label5.Text = frequency.ToString("0.0");
+            frequency_values[3] = frequency;
+            angle_values[2] = frequency_angle;
+         
+        }
+
+        private void label6_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (label6.Text == "Radio 4")
+            {
+                return;
+            }
+
+            else if (e.Button == MouseButtons.Right)
+            {
+                int target_angle = angle_values[3];
+                float target_frequency = frequency_values[4];
+                
+
+                int x_1 = center1_x + (int)(radius * Math.Sin(Math.PI * target_angle / 180.0));
+                int y_1 = center1_y - (int)(radius * Math.Cos(Math.PI * target_angle / 180.0));
+                label2.Text = "Frequency:" + target_frequency.ToString("0.0");
+
+                lineShape2.X2 = x_1;
+                lineShape2.Y2 = y_1;
+
+                frequencyData = target_frequency.ToString("0.0");
+                string combined_data = String.Format("{0}|{1}", volumeData, frequencyData);
+                dataBytes = Encoding.ASCII.GetBytes(combined_data);
+                client_1.Send(dataBytes, dataBytes.Length, new IPEndPoint(remoteIPAddress, remotePort));
+                
+                frequency_angle = target_angle;
+            }
+        }
+
+        private void label6_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            label6.Text = frequency.ToString("0.0");
+            frequency_values[4] = frequency;
+            angle_values[3] = frequency_angle;
+        }
+
+        private void label7_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (label7.Text == "Radio 5")
+            {
+                return;
+            }
+
+            else if (e.Button == MouseButtons.Right)
+            {
+                int target_angle = angle_values[4];
+                float target_frequency = frequency_values[5];
+                
+                int x_1 = center1_x + (int)(radius * Math.Sin(Math.PI * target_angle / 180.0));
+                int y_1 = center1_y - (int)(radius * Math.Cos(Math.PI * target_angle / 180.0));
+                label2.Text = "Frequency:" + target_frequency.ToString("0.0");
+
+                lineShape2.X2 = x_1;
+                lineShape2.Y2 = y_1;
+
+                frequencyData = target_frequency.ToString("0.0");
+                string combined_data = String.Format("{0}|{1}", volumeData, frequencyData);
+                dataBytes = Encoding.ASCII.GetBytes(combined_data);
+                client_1.Send(dataBytes, dataBytes.Length, new IPEndPoint(remoteIPAddress, remotePort));
+                
+                frequency_angle = target_angle;
+            }
+        }
+
+        private void label7_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            label7.Text = frequency.ToString("0.0");
+            frequency_values[5] = frequency;
+            angle_values[4] = frequency_angle;
+        }
+
+        private void label8_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (label8.Text == "Radio 6")
+            {
+                return;
+            }
+
+            else if (e.Button == MouseButtons.Right)
+            {
+                int target_angle = angle_values[5];
+                float target_frequency = frequency_values[6];
+
+                int x_1 = center1_x + (int)(radius * Math.Sin(Math.PI * target_angle / 180.0));
+                int y_1 = center1_y - (int)(radius * Math.Cos(Math.PI * target_angle / 180.0));
+                label2.Text = "Frequency:" + target_frequency.ToString("0.0");
+
+                lineShape2.X2 = x_1;
+                lineShape2.Y2 = y_1;
+
+                frequencyData = target_frequency.ToString("0.0");
+                string combined_data = String.Format("{0}|{1}", volumeData, frequencyData);
+                dataBytes = Encoding.ASCII.GetBytes(combined_data);
+                client_1.Send(dataBytes, dataBytes.Length, new IPEndPoint(remoteIPAddress, remotePort));
+                
+                frequency_angle = target_angle;
+            }
+        }
+
+        private void label8_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            label8.Text = frequency.ToString("0.0");
+            frequency_values[6] = frequency;
+            angle_values[5] = frequency_angle;
+        }
+    }
+}
