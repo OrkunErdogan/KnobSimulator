@@ -1,1 +1,14 @@
-# KnobSimulator
+- Developed a basic Knob Simulator using C# and .NET WPF.
+- Established communication between two partitions using UDP (User Datagram Protocol).
+- Two partitions in place: Adjustment Partition and Display Partition.
+- In the Adjustment Partition:
+  - Adjustable volume and frequency values.
+  - Ability to save desired frequencies in empty slots.
+  - Detection of Knob adjustments using Mouse events.
+  - Presets can be saved with a left double-click.
+- In the Display Partition:
+  - Visualization of operation results from Partition 1.
+  - Opening of saved presets with a right-click.
+- Knob adjustments detected only when the mouse cursor is within circles.
+- Volume adjustments reflected in a progress bar, updated in intervals of 10 volume values.
+- System designed to meet specific system and software requirements.
